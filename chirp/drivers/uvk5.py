@@ -429,11 +429,13 @@ def _send_command(serport, data: bytes):
 
 def _receive_reply(serport):
     header = serport.read(4)
-    if len(header) != 4:
+    if not header:
+        raise errors.RadioError("No response from radio")
+    elif len(header) != 4:
         LOG.warning("Header short read: [%s] len=%i",
                     util.hexprint(header), len(header))
         raise errors.RadioError("Header short read")
-    if header[0] != 0xAB or header[1] != 0xCD or header[3] != 0x00:
+    elif header[0] != 0xAB or header[1] != 0xCD or header[3] != 0x00:
         LOG.warning("Bad response header: %s len=%i",
                     util.hexprint(header), len(header))
         raise errors.RadioError("Bad response header")
@@ -2071,7 +2073,7 @@ class UVK5Radio(UVK5RadioBase):
     @classmethod
     def detect_from_serial(cls, pipe):
         firmware = _sayhello(pipe)
-        for rclass in [UVK5Radio] + cls.detected_models():
+        for rclass in cls.detected_models():
             if rclass.k5_approve_firmware(firmware):
                 return rclass
         raise errors.RadioError('Firmware %r not supported' % firmware)
